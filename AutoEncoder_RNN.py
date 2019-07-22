@@ -44,13 +44,6 @@ def small2large(x):
     x = x.reshape(args.divide * width, args.divide * width, -1)
     return x
 
-#def large2small(x):
-#    # (d * width, d * width) -> (d * d, width, width)
-#    x = x.reshape(args.divide, width, args.divide, width, 3)
-#    x = np.transpose(x, (0, 2, 1, 3, 4))
-#    x = x.reshape(canvas_cnt, width, width, 3)
-#    return x
-
 def smooth(img):
     def smooth_pix(img, tx, ty):
         if tx == args.divide * width - 1 or ty == args.divide * width - 1 or tx == 0 or ty == 0:
@@ -109,23 +102,16 @@ img_transform = transforms.Compose([
     transforms.Resize(size=(width, width)),
     transforms.ToTensor()
 ])
-    
+
 # Loading Dataset of celebrity face images
 #dataset = ImageFolder('C:\\Users\\Shawn\\Desktop\\NYU\\LTP_SVG\\one_image', transform=img_transform) # laptop
 dataset = ImageFolder('/home/so1463/LearningToPaint/baseline/one_image', transform=img_transform) # cluster
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 # AutoEncoder model
-model = AutoEncoder().to(device)
+encoder = AutoEncoder().to(device)
 #if os.path.exists('./AutoEncoder.pth'):
 #    model.load_state_dict(torch.load('/home/so1463/LearningToPaint/baseline/AutoEncoder.pth'))
-
-
-
-
-
-###############################
-# or use the with no_grad block in our loop when we call the save_image function
 
 # Freeze weights of the renderer
 renderer = FCN().to(device)
@@ -135,7 +121,7 @@ for p in renderer.parameters():
     p.requires_grad = True
 
 # Define optimizer and loss function
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)             
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 criterion = nn.MSELoss(reduction='sum')
 
 loss_plot = []
@@ -151,30 +137,30 @@ for epoch in range(num_epochs): # each training epoch
     for data in dataloader: # for each image
         optimizer.zero_grad() # zeros the gradient, must do every iteration
         image, _=data
-        
-        # Change this to the non-deprecated version, get rid of Variable!
-        img = Variable(image, requires_grad=True).to(device) 
-        
-        stroke_matrix = model(img)
-        
+
+        # Converting our image to a tensor
+        img = Variable(image, requires_grad=True).to(device)
+
+        latent_code = encoder(img)
+
         canvas = torch.zeros([1, 3, width, width]).to(device)
         # Calling our neural renderer
-        canvas, res = decode(stroke_matrix, canvas) 
-        
+        canvas, res = decode(stroke_matrix, canvas)
+
         save_img(canvas, imgid)
         imgid += 1
-                
+
         loss = criterion(canvas, img)
         print('loss', loss)
         loss_plot.append(loss)
-        
+
         # Backward pass: compute gradient of the loss with respect to model parameters
         loss.backward()
-        
+
         # Calling the step function on an Optimizer makes an update to its parameters
         optimizer.step()
-       
-        
+
+
 #        for j in range(len(res)):
 #            save_img(res[j], imgid)
 #            imgid += 1
@@ -197,4 +183,3 @@ torch.save(model.state_dict(), './AutoEncoder.pth')
 plt.plot(loss_plot)
 plt.ylabel('loss')
 plt.savefig('./loss_graph.png')
-
