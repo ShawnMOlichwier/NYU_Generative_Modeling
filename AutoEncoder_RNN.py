@@ -12,6 +12,7 @@ from torchvision.datasets import ImageFolder
 from torch.autograd import Variable
 from Renderer.model import FCN
 from AutoEncoder import AutoEncoder
+from RNN_Decoder import RNN
 import matplotlib
 matplotlib.use('Agg') # Need this to print on the cluster
 import matplotlib.pyplot as plt
@@ -96,6 +97,7 @@ learning_rate = 0.0005
 num_epochs = 2000
 batch_size = 1
 width = 128
+strokes = 1000
 
 # Transforms for our input images
 img_transform = transforms.Compose([
@@ -113,6 +115,10 @@ encoder = AutoEncoder().to(device)
 #if os.path.exists('./AutoEncoder.pth'):
 #    model.load_state_dict(torch.load('/home/so1463/LearningToPaint/baseline/AutoEncoder.pth'))
 
+# Define our RNN model
+RNN = RNN().to(device)
+
+
 # Freeze weights of the renderer
 renderer = FCN().to(device)
 renderer.load_state_dict(torch.load(args.renderer))
@@ -121,7 +127,7 @@ for p in renderer.parameters():
     p.requires_grad = True
 
 # Define optimizer and loss function
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
 criterion = nn.MSELoss(reduction='sum')
 
 loss_plot = []
@@ -135,35 +141,42 @@ imgid = 1
 for epoch in range(num_epochs): # each training epoch
 
     for data in dataloader: # for each image
-        optimizer.zero_grad() # zeros the gradient, must do every iteration
         image, _=data
 
         # Converting our image to a tensor
         img = Variable(image, requires_grad=True).to(device)
 
-        latent_code = encoder(img)
-
+        # Clean canvas for each image
         canvas = torch.zeros([1, 3, width, width]).to(device)
-        # Calling our neural renderer
-        canvas, res = decode(stroke_matrix, canvas)
 
-        save_img(canvas, imgid)
-        imgid += 1
+        for stroke in strokes:  # 1000 strokes
+            optimizer.zero_grad() # zeros the gradient, must do every iteration
 
-        loss = criterion(canvas, img)
-        print('loss', loss)
-        loss_plot.append(loss)
+            latent_code = encoder(img) # does this need to be outside of this loop?
 
-        # Backward pass: compute gradient of the loss with respect to model parameters
-        loss.backward()
-
-        # Calling the step function on an Optimizer makes an update to its parameters
-        optimizer.step()
+            last_stroke, last_hidden =
 
 
-#        for j in range(len(res)):
-#            save_img(res[j], imgid)
-#            imgid += 1
+            # Calling our neural renderer
+            canvas, res = decode(stroke_matrix, canvas)
+
+            save_img(canvas, imgid)
+            imgid += 1
+
+            loss = criterion(canvas, img)
+            print('loss', loss)
+            loss_plot.append(loss)
+
+            # Backward pass: compute gradient of the loss with respect to model parameters
+            loss.backward()
+
+            # Calling the step function on an Optimizer makes an update to its parameters
+            optimizer.step()
+
+
+    #        for j in range(len(res)):
+    #            save_img(res[j], imgid)
+    #            imgid += 1
 
     print('Epoch {} Finished ############################'.format(epoch))
 
