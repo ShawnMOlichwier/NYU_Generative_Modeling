@@ -6,7 +6,7 @@ import torch.nn as nn
 ##########################
 class AutoEncoder(torch.nn.Module):
 
-    def __init__(self):
+    def __init__(self, stroke_number):
         super(AutoEncoder, self).__init__()
         # VGG16 Code
         self.block_1 = nn.Sequential(
@@ -118,8 +118,11 @@ class AutoEncoder(torch.nn.Module):
             nn.ReLU(True),
             nn.Linear(4096, 1024),
             nn.ReLU(True),
-            nn.Linear(1024, 128)
+            nn.Linear(1024, 64)
         )
+
+# Can we add our RNN network here?
+
 
     def forward(self, x):
         x = self.block_1(x)

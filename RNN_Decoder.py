@@ -9,16 +9,17 @@ import numpy as np
 ### MODEL
 ##########################
 
-class LSTM(torch.nn.Module):
+class RNN(torch.nn.Module):
     def __init__(self, latent_vector, last_stroke, last_hidden):
-        super(LSTM, self).__init__()
-        self.fc1 = nn.Linear((latent_vector * last_stroke * hidden), 13)
-        self.fc2 = nn.Linear(())
+        super(RNN, self).__init__()
+        self.fc1 = nn.Linear((latent_vector * last_stroke * hidden), 128)
+        self.fc2 = nn.Linear(128, 13)
 
 
     def forward(self, x):
-        x = self.fc1(x)
-        return x
+        hidden = self.fc1(x)
+        output = self.fc2(hidden)
+        return output
 
 
 
