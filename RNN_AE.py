@@ -121,7 +121,21 @@ class AutoEncoder(torch.nn.Module):
             nn.Linear(1024, 64)
         )
 
-# Can we add our RNN network here?
+
+        self.RNN_hidden = nn.Sequential(
+            nn.Linear(141, 64),
+            nn.RelU()
+        )
+
+        self.RNN_stroke = nn.Sequential(
+            nn.Linear(64, 13)
+        )
+
+
+        # def RNN(self, latent, stroke, hidden):
+        #     concat = torch.cat(latent, stroke, hidden) # 141
+        #     hidden = nn.Linear(concat, 64)
+        #     stroke = nn.Linear(hidden, )
 
 
     def forward(self, x):
@@ -131,5 +145,13 @@ class AutoEncoder(torch.nn.Module):
         x = self.block_4(x)
         x = self.block_5(x)
         x = x.view(x.size(0), -1)
-        logits = self.feature_extractor(x) # logits represents our latent vector,
-        return logits
+        latent = self.feature_extractor(x)
+
+        stroke = torch.zeros(13)
+        hidden = torch.zeros(64)
+        for _ in stroke_number:
+            concat = torch.cat(latent, stroke, hidden) # 141
+            hidden = self.RNN_hidden(concat)
+            stroke = self.RNN_stroke(hidden)
+
+        return
